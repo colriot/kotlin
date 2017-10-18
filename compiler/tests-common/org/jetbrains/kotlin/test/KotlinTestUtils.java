@@ -389,10 +389,7 @@ public class KotlinTestUtils {
 
     @NotNull
     public static File tmpDirForTest(TestCase test) throws IOException {
-        // Get canonical file to be sure that it's the same as inside the compiler,
-        // for example, on Windows, if a canonical path contains any space from FileUtil.createTempDirectory we will get
-        // a File with short names (8.3) in its path and it will break some normalization passes in tests.
-        File answer = FileUtil.createTempDirectory(test.getClass().getSimpleName(), test.getName()).getCanonicalFile();
+        File answer = normalizeFile(FileUtil.createTempDirectory(test.getClass().getSimpleName(), test.getName()));
         deleteOnShutdown(answer);
         return answer;
     }
@@ -400,15 +397,19 @@ public class KotlinTestUtils {
     @NotNull
     public static File tmpDir(String name) throws IOException {
         // We should use this form. otherwise directory will be deleted on each test.
-        // Get canonical file to be sure that it's the same as inside the compiler,
-        // for example, on Windows, if a canonical path contains any space from FileUtil.createTempDirectory we will get
-        // a File with short names (8.3) in its path and it will break some normalization passes in tests.
-        File answer = FileUtil.createTempDirectory(new File(System.getProperty("java.io.tmpdir")), name, "").getCanonicalFile();
+        File answer = normalizeFile(FileUtil.createTempDirectory(new File(System.getProperty("java.io.tmpdir")), name, ""));
         deleteOnShutdown(answer);
         return answer;
     }
 
-    public static void deleteOnShutdown(File file) {
+    private static File normalizeFile(File file) throws IOException {
+        // Get canonical file to be sure that it's the same as inside the compiler,
+        // for example, on Windows, if a canonical path contains any space from FileUtil.createTempDirectory we will get
+        // a File with short names (8.3) in its path and it will break some normalization passes in tests.
+        return file.getCanonicalFile();
+    }
+
+    private static void deleteOnShutdown(File file) {
         if (filesToDelete.isEmpty()) {
             ShutDownTracker.getInstance().registerShutdownTask(() -> ShutDownTracker.invokeAndWait(true, true, () -> {
                 for (File victim : filesToDelete) {
