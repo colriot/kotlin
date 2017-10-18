@@ -389,14 +389,20 @@ public class KotlinTestUtils {
 
     @NotNull
     public static File tmpDirForTest(TestCase test) throws IOException {
-        File answer = FileUtil.createTempDirectory(test.getClass().getSimpleName(), test.getName());
+        // Get canonical file to be sure that it's the same as inside the compiler,
+        // for example, on Windows, if a canonical path contains any space from FileUtil.createTempDirectory we will get
+        // a File with short names (8.3) in its path and it will break some normalization passes in tests.
+        File answer = FileUtil.createTempDirectory(test.getClass().getSimpleName(), test.getName()).getCanonicalFile();
         deleteOnShutdown(answer);
         return answer;
     }
 
     @NotNull
     public static File tmpDir(String name) throws IOException {
-        // we should use this form. otherwise directory will be deleted on each test
+        // We should use this form. otherwise directory will be deleted on each test.
+        // Get canonical file to be sure that it's the same as inside the compiler,
+        // for example, on Windows, if a canonical path contains any space from FileUtil.createTempDirectory we will get
+        // a File with short names (8.3) in its path and it will break some normalization passes in tests.
         File answer = FileUtil.createTempDirectory(new File(System.getProperty("java.io.tmpdir")), name, "").getCanonicalFile();
         deleteOnShutdown(answer);
         return answer;
