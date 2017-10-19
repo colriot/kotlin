@@ -16,14 +16,11 @@
 
 package org.jetbrains.kotlin.load.java.structure.impl.classFiles
 
-import com.intellij.psi.CommonClassNames
 import com.intellij.util.containers.ContainerUtil
 import org.jetbrains.kotlin.builtins.PrimitiveType
 import org.jetbrains.kotlin.load.java.structure.JavaClassifierType
 import org.jetbrains.kotlin.load.java.structure.JavaType
 import org.jetbrains.kotlin.load.java.structure.JavaTypeParameter
-import org.jetbrains.kotlin.name.ClassId
-import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.addToStdlib.flattenTo
 import org.jetbrains.kotlin.utils.compact
@@ -34,13 +31,7 @@ import java.text.StringCharacterIterator
 /**
  * Take a look at com.intellij.psi.impl.compiled.SignatureParsing
  */
-class BinaryClassSignatureParser(globalContext: ClassifierResolutionContext) {
-    companion object {
-        private val JAVA_LANG_OBJECT = ClassId.topLevel(FqName(CommonClassNames.JAVA_LANG_OBJECT))
-    }
-
-    private val JAVA_LANG_OBJECT_CLASSIFIER_TYPE: JavaClassifierType =
-            PlainJavaClassifierType({ globalContext.resolveClass(JAVA_LANG_OBJECT) }, emptyList())
+class BinaryClassSignatureParser {
 
     fun parseTypeParametersDeclaration(signature: CharacterIterator, context: ClassifierResolutionContext): List<JavaTypeParameter> {
         if (signature.current() != '<') {
@@ -69,19 +60,11 @@ class BinaryClassSignatureParser(globalContext: ClassifierResolutionContext) {
 
         // postpone list allocation till a second bound is seen; ignore sole Object bound
         var bounds: MutableList<JavaClassifierType>? = null
-        var jlo = false
         while (signature.current() == ':') {
             signature.next()
             val bound = parseClassifierRefSignature(signature, context) ?: continue
             if (bounds == null) {
-                if (JAVA_LANG_OBJECT_CLASSIFIER_TYPE === bound) {
-                    jlo = true
-                    continue
-                }
                 bounds = ContainerUtil.newSmartList()
-                if (jlo) {
-                    bounds.add(JAVA_LANG_OBJECT_CLASSIFIER_TYPE)
-                }
             }
             bounds.add(bound)
         }
@@ -147,8 +130,6 @@ class BinaryClassSignatureParser(globalContext: ClassifierResolutionContext) {
             throw ClsFormatException()
         }
         signature.next()
-
-        if (canonicalName.toString() == "java/lang/Object") return JAVA_LANG_OBJECT_CLASSIFIER_TYPE
 
         return PlainJavaClassifierType(
                 { context.resolveByInternalName(canonicalName.toString()) },
